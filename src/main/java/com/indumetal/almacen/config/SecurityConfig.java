@@ -21,9 +21,9 @@ import org.springframework.web.cors.CorsConfigurationSource;
 
 /**
  * Reglas de acceso HTTP (RF-01 / RF-02):
- *  - /api/auth/**  y  /swagger-ui/**, /v3/api-docs/**  -> publicos
- *  - todo lo demas -> requiere JWT valido
- *  - restricciones finas por rol se aplican en cada @PreAuthorize del controller
+ * - /api/auth/** y /swagger-ui/**, /v3/api-docs/** -> publicos
+ * - todo lo demas -> requiere JWT valido
+ * - restricciones finas por rol se aplican en cada @PreAuthorize del controller
  */
 @Configuration
 @EnableWebSecurity
@@ -37,8 +37,11 @@ public class SecurityConfig {
 
     private static final String[] RUTAS_PUBLICAS = {
             "/api/auth/**",
+            "/swagger-ui.html",
             "/swagger-ui/**",
+            "/v3/api-docs",
             "/v3/api-docs/**",
+            "/webjars/**",
             "/actuator/health"
     };
 
@@ -50,12 +53,12 @@ public class SecurityConfig {
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(RUTAS_PUBLICAS).permitAll()
-                        .anyRequest().authenticated()
-                )
+                        .anyRequest().authenticated())
                 .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint((req, res, e) -> res.sendError(HttpStatus.UNAUTHORIZED.value(), "No autenticado"))
-                        .accessDeniedHandler((req, res, e) -> res.sendError(HttpStatus.FORBIDDEN.value(), "Acceso denegado"))
-                )
+                        .authenticationEntryPoint(
+                                (req, res, e) -> res.sendError(HttpStatus.UNAUTHORIZED.value(), "No autenticado"))
+                        .accessDeniedHandler(
+                                (req, res, e) -> res.sendError(HttpStatus.FORBIDDEN.value(), "Acceso denegado")))
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
