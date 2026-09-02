@@ -1,0 +1,23 @@
+# Variables de entorno / credenciales (NUNCA subir a un repositorio)
+.env
+.env.*
+!.env.example
+
+# Maven
+target/
+*.class
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
