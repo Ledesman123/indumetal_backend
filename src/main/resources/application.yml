@@ -64,6 +64,12 @@ app:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200}
   stock:
     revisar-cron: "0 0 7 * * *"   # todos los dias 7:00 a.m., revisa stock minimo
+  rate-limit:
+    # Limite de peticiones SOLO para endpoints sensibles de autenticacion
+    # (login y recuperacion de password), para dificultar fuerza bruta.
+    capacidad: ${RATE_LIMIT_CAPACIDAD:10}          # maximo de intentos...
+    ventana-segundos: ${RATE_LIMIT_VENTANA:60}     # ...por esta cantidad de segundos, por IP+ruta
+    rutas: /api/auth/login,/api/auth/forgot-password,/api/auth/verify-reset-code,/api/auth/reset-password
 
 springdoc:
   api-docs:

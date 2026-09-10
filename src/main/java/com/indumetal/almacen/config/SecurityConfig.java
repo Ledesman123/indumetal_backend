@@ -1,7 +1,9 @@
 package com.indumetal.almacen.config;
 
 import com.indumetal.almacen.security.JwtAuthenticationFilter;
+import com.indumetal.almacen.security.RateLimitFilter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -21,9 +23,9 @@ import org.springframework.web.cors.CorsConfigurationSource;
 
 /**
  * Reglas de acceso HTTP (RF-01 / RF-02):
- * - /api/auth/** y /swagger-ui/**, /v3/api-docs/** -> publicos
- * - todo lo demas -> requiere JWT valido
- * - restricciones finas por rol se aplican en cada @PreAuthorize del controller
+ *  - /api/auth/**  y  /swagger-ui/**, /v3/api-docs/**  -> publicos
+ *  - todo lo demas -> requiere JWT valido
+ *  - restricciones finas por rol se aplican en cada @PreAuthorize del controller
  */
 @Configuration
 @EnableWebSecurity
@@ -32,6 +34,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final RateLimitFilter rateLimitFilter;
     private final UserDetailsService userDetailsService;
     private final CorsConfigurationSource corsConfigurationSource;
 
@@ -53,14 +56,15 @@ public class SecurityConfig {
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(RUTAS_PUBLICAS).permitAll()
-                        .anyRequest().authenticated())
+                        .anyRequest().authenticated()
+                )
                 .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint(
-                                (req, res, e) -> res.sendError(HttpStatus.UNAUTHORIZED.value(), "No autenticado"))
-                        .accessDeniedHandler(
-                                (req, res, e) -> res.sendError(HttpStatus.FORBIDDEN.value(), "Acceso denegado")))
+                        .authenticationEntryPoint((req, res, e) -> res.sendError(HttpStatus.UNAUTHORIZED.value(), "No autenticado"))
+                        .accessDeniedHandler((req, res, e) -> res.sendError(HttpStatus.FORBIDDEN.value(), "Acceso denegado"))
+                )
                 .authenticationProvider(authenticationProvider())
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
@@ -81,5 +85,19 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder(); // RF-01: contrasenas cifradas con BCrypt
+    }
+
+    /**
+     * RateLimitFilter es un @Component (para poder inyectarlo aqui), pero por
+     * defecto Spring Boot registraria cualquier bean Filter automaticamente
+     * para TODAS las rutas ademas de agregarlo a la cadena de Spring Security
+     * (addFilterBefore, arriba). Esto lo desactiva como filtro global generico
+     * para que solo se ejecute una vez, a traves de Spring Security.
+     */
+    @Bean
+    public FilterRegistrationBean<RateLimitFilter> desactivarRegistroAutomaticoRateLimit(RateLimitFilter filtro) {
+        FilterRegistrationBean<RateLimitFilter> registro = new FilterRegistrationBean<>(filtro);
+        registro.setEnabled(false);
+        return registro;
     }
 }
