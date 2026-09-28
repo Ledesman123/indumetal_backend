@@ -2,7 +2,6 @@ name: Keep Supabase Alive
 
 on:
   schedule:
-    # Ejecuta cada 5 días a las 12:00 UTC
     - cron: "0 12 */5 * *"
   workflow_dispatch:
 
@@ -10,8 +9,16 @@ jobs:
   ping:
     runs-on: ubuntu-latest
 
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      SUPABASE_DB_USER: ${{ secrets.SUPABASE_DB_USER }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
+      MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+
     steps:
       - name: Ping Supabase
         run: |
+          echo "Conectando con Supabase..."
           curl -L -s -o /dev/null -w "%{http_code}\n" \
-          "${{ secrets.SUPABASE_URL }}/rest/v1/"
+          "https://armhujbsewtnhrmkgu.supabase.co/rest/v1/"
