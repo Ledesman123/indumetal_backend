@@ -9,16 +9,18 @@ jobs:
   ping:
     runs-on: ubuntu-latest
 
-    env:
-      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-      SUPABASE_DB_USER: ${{ secrets.SUPABASE_DB_USER }}
-      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-      MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
-      MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
-
     steps:
-      - name: Ping Supabase
+      - name: Instalar cliente de PostgreSQL
+        run: sudo apt-get install -y postgresql-client
+
+      - name: Ping Supabase Database
+        env:
+          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          DB_USER: ${{ secrets.SUPABASE_DB_USER }}
         run: |
-          echo "Conectando con Supabase..."
-          curl -L -s -o /dev/null -w "%{http_code}\n" \
-          "https://armhujbsewtnhrmkgu.supabase.co/rest/v1/"
+          echo "Conectando a la base de datos..."
+          # Extrae el host y puerto limpiando el prefijo jdbc:postgresql://
+          CLEAN_URL=$(echo "$DB_URL" | sed 's#jdbc:postgresql://##' | cut -d'?' -f1)
+          
+          psql "postgresql://${DB_USER}:${PGPASSWORD}@${CLEAN_URL}" -c "SELECT 1;"
