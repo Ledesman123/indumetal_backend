@@ -11,7 +11,7 @@ jobs:
 
     steps:
       - name: Instalar cliente de PostgreSQL
-        run: sudo apt-get install -y postgresql-client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
 
       - name: Ping Supabase Database
         env:
@@ -20,7 +20,11 @@ jobs:
           DB_USER: ${{ secrets.SUPABASE_DB_USER }}
         run: |
           echo "Conectando a la base de datos..."
-          # Extrae el host y puerto limpiando el prefijo jdbc:postgresql://
-          CLEAN_URL=$(echo "$DB_URL" | sed 's#jdbc:postgresql://##' | cut -d'?' -f1)
-          
-          psql "postgresql://${DB_USER}:${PGPASSWORD}@${CLEAN_URL}" -c "SELECT 1;"
+
+          CLEAN_URL=$(echo "$DB_URL" | sed 's#^jdbc:postgresql://##')
+
+          echo "Host configurado correctamente"
+          echo "Usuario: ${DB_USER}"
+
+          psql "postgresql://${DB_USER}:${PGPASSWORD}@${CLEAN_URL}" \
+            -c "SELECT 1;"
