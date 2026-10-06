@@ -1,5 +1,6 @@
 package com.indumetal.almacen.modules.ubicacion;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties; // <--- NUEVO IMPORT
 import com.indumetal.almacen.modules.almacen.Almacen;
 import jakarta.persistence.*;
 import lombok.*;
@@ -12,6 +13,7 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"}) // <--- NUEVA ANOTACIÓN
 public class Ubicacion {
 
     @Id

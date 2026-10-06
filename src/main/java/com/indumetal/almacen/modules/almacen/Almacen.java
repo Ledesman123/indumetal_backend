@@ -1,5 +1,6 @@
 package com.indumetal.almacen.modules.almacen;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties; // <--- 1. AGREGA ESTE IMPORT
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -11,6 +12,7 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"}) // <--- 2. AGREGA ESTA LÍNEA
 public class Almacen {
 
     @Id

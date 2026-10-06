@@ -1,5 +1,6 @@
 package com.indumetal.almacen.modules.material;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties; // <--- NUEVO IMPORT
 import com.indumetal.almacen.common.audit.Auditable;
 import jakarta.persistence.*;
 import lombok.*;
@@ -14,6 +15,7 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"}) // <--- NUEVA ANOTACIÓN
 public class Material extends Auditable {
 
     @Id

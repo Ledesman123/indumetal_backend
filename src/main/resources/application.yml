@@ -23,7 +23,7 @@ spring:
       # IMPORTANTE: en produccion usar "validate".
       # Flyway es quien crea/versiona las tablas, Hibernate solo valida el mapeo.
       ddl-auto: validate
-    open-in-view: false
+    open-in-view: true
     properties:
       hibernate:
         format_sql: true
