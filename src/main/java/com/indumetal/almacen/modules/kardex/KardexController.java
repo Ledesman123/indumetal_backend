@@ -12,7 +12,7 @@ import java.math.BigDecimal;
 
 /** RF-09: kardex por material. RF-10: stock disponible en tiempo real. */
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/materiales/{materialId}")
 @RequiredArgsConstructor
 public class KardexController {
 
@@ -20,7 +20,7 @@ public class KardexController {
     private final StockUbicacionRepository stockRepository;
 
     // RF-09: GET /api/materiales/5/kardex?page=0&size=20
-    @GetMapping("/materiales/{materialId}/kardex")
+    @GetMapping("/kardex")
     public ApiResponse<PageResponse<KardexItem>> kardex(@PathVariable Long materialId, Pageable pageable) {
         var page = movimientoRepository
                 .findByMaterialIdOrderByCreadoEnAsc(materialId, pageable)
@@ -29,13 +29,13 @@ public class KardexController {
     }
 
     // RF-10: GET /api/materiales/5/stock  -> stock total en todas las ubicaciones
-    @GetMapping("/materiales/{materialId}/stock")
+    @GetMapping("/stock")
     public ApiResponse<BigDecimal> stockTotal(@PathVariable Long materialId) {
         return ApiResponse.ok(stockRepository.sumarStockPorMaterial(materialId));
     }
 
     // RF-10: GET /api/materiales/5/stock-por-ubicacion -> detalle por ubicacion
-    @GetMapping("/materiales/{materialId}/stock-por-ubicacion")
+    @GetMapping("/stock-por-ubicacion")
     public ApiResponse<?> stockPorUbicacion(@PathVariable Long materialId) {
         return ApiResponse.ok(stockRepository.findByMaterialId(materialId));
     }
