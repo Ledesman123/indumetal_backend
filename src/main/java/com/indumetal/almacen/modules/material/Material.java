@@ -52,8 +52,8 @@ public class Material extends Auditable {
     @Builder.Default
     private Boolean requiereLote = false; // RF-13: trazabilidad por lote/vencimiento
 
-    @Column(name = "imagen_url")
-    private String imagenUrl; // RF-19: imagen de referencia (Supabase Storage)
+    @Column(name = "imagen_url", columnDefinition = "TEXT")
+    private String imagenUrl; // RF-19: imagen de referencia (data URL comprimida desde el frontend)
 
     @Column(nullable = false)
     @Builder.Default

@@ -58,6 +58,11 @@ public class InventarioFisicoService {
         Almacen almacen = almacenRepository.findById(req.getAlmacenId())
                 .orElseThrow(() -> ResourceNotFoundException.of("Almacen", req.getAlmacenId()));
 
+        if (inventarioRepository.existsByAlmacenIdAndEstado(almacen.getId(), InventarioFisico.EstadoInventario.ABIERTO)) {
+            throw new BusinessException("El almacen " + almacen.getNombre()
+                    + " ya tiene un inventario en proceso. Cierrelo antes de iniciar otro.");
+        }
+
         boolean todos = req.getMaterialIds() == null || req.getMaterialIds().isEmpty();
         List<StockUbicacion> stocks = stockRepository.findByUbicacionAlmacenId(almacen.getId()).stream()
                 .filter(s -> todos || req.getMaterialIds().contains(s.getMaterial().getId()))

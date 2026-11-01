@@ -44,4 +44,10 @@ public class Usuario extends Auditable {
 
     @Column(name = "bloqueado_hasta")
     private java.time.Instant bloqueadoHasta;
+
+    @Column(length = 20)
+    private String telefono;
+
+    @Column(name = "foto_url", columnDefinition = "TEXT")
+    private String fotoUrl; // foto de perfil (data URL comprimida desde el frontend)
 }

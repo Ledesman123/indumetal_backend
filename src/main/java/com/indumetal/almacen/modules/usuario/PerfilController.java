@@ -2,10 +2,11 @@ package com.indumetal.almacen.modules.usuario;
 
 import com.indumetal.almacen.common.dto.ApiResponse;
 import com.indumetal.almacen.common.exception.BusinessException;
-import com.indumetal.almacen.modules.usuario.dto.UsuarioResponse;
+import com.indumetal.almacen.modules.rol.RolNombre;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -24,21 +25,36 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class PerfilController {
 
+    // La foto llega comprimida desde el frontend (~30-80 KB); se limita para no inflar la BD.
+    private static final int MAX_FOTO_CARACTERES = 700_000;
+
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
 
     @GetMapping
-    public ApiResponse<UsuarioResponse> obtener() {
-        return ApiResponse.ok(UsuarioResponse.fromEntity(usuarioActual()));
+    public ApiResponse<PerfilResponse> obtener() {
+        return ApiResponse.ok(PerfilResponse.fromEntity(usuarioActual()));
     }
 
     @PutMapping
     @Transactional
-    public ApiResponse<UsuarioResponse> actualizar(@Valid @RequestBody ActualizarPerfilRequest request) {
+    public ApiResponse<PerfilResponse> actualizar(@Valid @RequestBody ActualizarPerfilRequest request) {
+        String foto = request.getFotoUrl();
+        if (foto != null && !foto.isBlank()) {
+            if (!foto.startsWith("data:image/")) {
+                throw new BusinessException("La foto de perfil debe ser una imagen.");
+            }
+            if (foto.length() > MAX_FOTO_CARACTERES) {
+                throw new BusinessException("La foto de perfil es demasiado grande.");
+            }
+        }
+
         Usuario usuario = usuarioActual();
         usuario.setNombres(request.getNombres());
         usuario.setApellidos(request.getApellidos());
-        return ApiResponse.ok("Perfil actualizado", UsuarioResponse.fromEntity(usuarioRepository.save(usuario)));
+        usuario.setTelefono(request.getTelefono());
+        usuario.setFotoUrl(foto == null || foto.isBlank() ? null : foto);
+        return ApiResponse.ok("Perfil actualizado", PerfilResponse.fromEntity(usuarioRepository.save(usuario)));
     }
 
     @PutMapping("/password")
@@ -60,12 +76,39 @@ public class PerfilController {
     }
 
     @Getter
+    @Builder
+    public static class PerfilResponse {
+        private Long id;
+        private String nombres;
+        private String apellidos;
+        private String correo;
+        private RolNombre rol;
+        private String telefono;
+        private String fotoUrl;
+
+        static PerfilResponse fromEntity(Usuario u) {
+            return PerfilResponse.builder()
+                    .id(u.getId())
+                    .nombres(u.getNombres())
+                    .apellidos(u.getApellidos())
+                    .correo(u.getCorreo())
+                    .rol(u.getRol().getNombre())
+                    .telefono(u.getTelefono())
+                    .fotoUrl(u.getFotoUrl())
+                    .build();
+        }
+    }
+
+    @Getter
     @Setter
     public static class ActualizarPerfilRequest {
         @NotBlank @Size(max = 150)
         private String nombres;
         @NotBlank @Size(max = 150)
         private String apellidos;
+        @Size(max = 20)
+        private String telefono;
+        private String fotoUrl; // data URL (base64) o null para quitar la foto
     }
 
     @Getter
