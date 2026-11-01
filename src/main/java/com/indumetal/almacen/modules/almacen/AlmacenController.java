@@ -47,7 +47,36 @@ public class AlmacenController {
 
     @GetMapping("/{id}")
     public ApiResponse<Almacen> obtener(@PathVariable Long id) {
-        return ApiResponse.ok(almacenRepository.findById(id)
-                .orElseThrow(() -> ResourceNotFoundException.of("Almacen", id)));
+        return ApiResponse.ok(buscar(id));
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('SUPERVISOR_ALMACEN','ADMINISTRADOR')")
+    @Transactional
+    public ApiResponse<Almacen> actualizar(@PathVariable Long id, @Valid @RequestBody AlmacenRequest request) {
+        Almacen almacen = buscar(id);
+        if (!almacen.getCodigo().equalsIgnoreCase(request.getCodigo())
+                && almacenRepository.existsByCodigoIgnoreCase(request.getCodigo())) {
+            throw new BusinessException("Ya existe un almacen con el codigo " + request.getCodigo());
+        }
+        almacen.setCodigo(request.getCodigo().toUpperCase());
+        almacen.setNombre(request.getNombre());
+        almacen.setDireccion(request.getDireccion());
+        return ApiResponse.ok("Almacen actualizado", almacenRepository.save(almacen));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('SUPERVISOR_ALMACEN','ADMINISTRADOR')")
+    @Transactional
+    public ApiResponse<Void> desactivar(@PathVariable Long id) {
+        Almacen almacen = buscar(id);
+        almacen.setActivo(false);
+        almacenRepository.save(almacen);
+        return ApiResponse.ok("Almacen desactivado", null);
+    }
+
+    private Almacen buscar(Long id) {
+        return almacenRepository.findById(id)
+                .orElseThrow(() -> ResourceNotFoundException.of("Almacen", id));
     }
 }

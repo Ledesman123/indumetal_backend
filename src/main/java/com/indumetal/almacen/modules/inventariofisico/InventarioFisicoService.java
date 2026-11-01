@@ -5,14 +5,14 @@ import com.indumetal.almacen.common.exception.ResourceNotFoundException;
 import com.indumetal.almacen.modules.almacen.Almacen;
 import com.indumetal.almacen.modules.almacen.AlmacenRepository;
 import com.indumetal.almacen.modules.inventariofisico.dto.IniciarInventarioRequest;
+import com.indumetal.almacen.modules.inventariofisico.dto.InventarioFisicoResponse;
 import com.indumetal.almacen.modules.inventariofisico.dto.RegistrarConteoRequest;
-import com.indumetal.almacen.modules.material.Material;
-import com.indumetal.almacen.modules.material.MaterialRepository;
 import com.indumetal.almacen.modules.stock.StockUbicacion;
 import com.indumetal.almacen.modules.stock.StockUbicacionRepository;
 import com.indumetal.almacen.modules.usuario.Usuario;
 import com.indumetal.almacen.modules.usuario.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,14 +34,38 @@ public class InventarioFisicoService {
     private final InventarioFisicoRepository inventarioRepository;
     private final DetalleInventarioFisicoRepository detalleRepository;
     private final AlmacenRepository almacenRepository;
-    private final MaterialRepository materialRepository;
     private final StockUbicacionRepository stockRepository;
     private final UsuarioRepository usuarioRepository;
 
+    @Transactional(readOnly = true)
+    public List<InventarioFisicoResponse> listar() {
+        return inventarioRepository.findAll(Sort.by(Sort.Direction.DESC, "fechaInicio")).stream()
+                .map(InventarioFisicoResponse::fromEntity)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public InventarioFisicoResponse obtener(Long id) {
+        return InventarioFisicoResponse.fromEntity(buscar(id));
+    }
+
+    /**
+     * Si 'materialIds' viene vacio o nulo, se cuentan TODOS los materiales con
+     * stock registrado en el almacen (inventario completo); si no, solo los indicados (ciclico).
+     */
     @Transactional
-    public InventarioFisico iniciar(IniciarInventarioRequest req) {
+    public InventarioFisicoResponse iniciar(IniciarInventarioRequest req) {
         Almacen almacen = almacenRepository.findById(req.getAlmacenId())
                 .orElseThrow(() -> ResourceNotFoundException.of("Almacen", req.getAlmacenId()));
+
+        boolean todos = req.getMaterialIds() == null || req.getMaterialIds().isEmpty();
+        List<StockUbicacion> stocks = stockRepository.findByUbicacionAlmacenId(almacen.getId()).stream()
+                .filter(s -> todos || req.getMaterialIds().contains(s.getMaterial().getId()))
+                .toList();
+        if (stocks.isEmpty()) {
+            throw new BusinessException("No hay stock registrado en el almacen " + almacen.getNombre()
+                    + " para los materiales seleccionados.");
+        }
 
         InventarioFisico inventario = InventarioFisico.builder()
                 .almacen(almacen)
@@ -49,44 +73,38 @@ public class InventarioFisicoService {
                 .estado(InventarioFisico.EstadoInventario.ABIERTO)
                 .fechaInicio(Instant.now())
                 .build();
-        inventario = inventarioRepository.save(inventario);
 
-        for (Long materialId : req.getMaterialIds()) {
-            Material material = materialRepository.findById(materialId)
-                    .orElseThrow(() -> ResourceNotFoundException.of("Material", materialId));
-
-            List<StockUbicacion> stocks = stockRepository.findByMaterialId(materialId);
-            for (StockUbicacion s : stocks) {
-                if (!s.getUbicacion().getAlmacen().getId().equals(almacen.getId())) continue;
-
-                detalleRepository.save(DetalleInventarioFisico.builder()
-                        .inventarioFisico(inventario)
-                        .material(material)
-                        .ubicacion(s.getUbicacion())
-                        .stockSistema(s.getCantidad())
-                        .build());
-            }
+        for (StockUbicacion s : stocks) {
+            inventario.getDetalles().add(DetalleInventarioFisico.builder()
+                    .inventarioFisico(inventario)
+                    .material(s.getMaterial())
+                    .ubicacion(s.getUbicacion())
+                    .stockSistema(s.getCantidad())
+                    .build());
         }
-        return inventario;
+        return InventarioFisicoResponse.fromEntity(inventarioRepository.save(inventario));
     }
 
     @Transactional
-    public DetalleInventarioFisico registrarConteo(RegistrarConteoRequest req) {
+    public InventarioFisicoResponse.Detalle registrarConteo(RegistrarConteoRequest req) {
         DetalleInventarioFisico detalle = detalleRepository.findById(req.getDetalleId())
                 .orElseThrow(() -> ResourceNotFoundException.of("Detalle de inventario", req.getDetalleId()));
+
+        if (detalle.getInventarioFisico().getEstado() == InventarioFisico.EstadoInventario.CERRADO) {
+            throw new BusinessException("Este inventario ya esta cerrado y no se puede modificar.");
+        }
 
         detalle.setStockFisico(req.getStockFisico());
         detalle.setDiferencia(req.getStockFisico().subtract(detalle.getStockSistema()));
         detalle.setObservaciones(req.getObservaciones());
 
-        return detalleRepository.save(detalle);
+        return InventarioFisicoResponse.Detalle.fromEntity(detalleRepository.save(detalle));
     }
 
     /** Cierra el inventario y AJUSTA el stock real segun lo contado (RF-12). */
     @Transactional
-    public InventarioFisico cerrar(Long inventarioId) {
-        InventarioFisico inventario = inventarioRepository.findById(inventarioId)
-                .orElseThrow(() -> ResourceNotFoundException.of("Inventario fisico", inventarioId));
+    public InventarioFisicoResponse cerrar(Long inventarioId) {
+        InventarioFisico inventario = buscar(inventarioId);
 
         if (inventario.getEstado() == InventarioFisico.EstadoInventario.CERRADO) {
             throw new BusinessException("El inventario ya se encuentra cerrado");
@@ -106,7 +124,12 @@ public class InventarioFisicoService {
 
         inventario.setEstado(InventarioFisico.EstadoInventario.CERRADO);
         inventario.setFechaCierre(Instant.now());
-        return inventarioRepository.save(inventario);
+        return InventarioFisicoResponse.fromEntity(inventarioRepository.save(inventario));
+    }
+
+    private InventarioFisico buscar(Long id) {
+        return inventarioRepository.findById(id)
+                .orElseThrow(() -> ResourceNotFoundException.of("Inventario fisico", id));
     }
 
     private Usuario usuarioActual() {

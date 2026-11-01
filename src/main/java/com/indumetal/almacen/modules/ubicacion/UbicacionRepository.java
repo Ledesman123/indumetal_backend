@@ -10,4 +10,6 @@ public interface UbicacionRepository extends JpaRepository<Ubicacion, Long> {
 
     // RF-07: fallback para asignacion automatica cuando no existe una ubicacion preferente.
     Optional<Ubicacion> findFirstByActivoTrueOrderByIdAsc();
+
+    List<Ubicacion> findByActivoTrueOrderByIdAsc();
 }

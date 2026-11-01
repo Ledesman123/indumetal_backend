@@ -25,6 +25,9 @@ public interface MovimientoAlmacenRepository extends JpaRepository<MovimientoAlm
 
     List<MovimientoAlmacen> findByMaterialIdOrderByCreadoEnAsc(Long materialId);
 
+    // Historial reciente de movimientos (pantalla de Movimientos / Reportes del frontend)
+    List<MovimientoAlmacen> findAllByOrderByCreadoEnDesc(Pageable pageable);
+
     // RF-14: materiales con mayor cantidad de movimientos en un rango de fechas.
     // Devuelve: [materialId, sku, nombre, cantidadMovimientos, sumaCantidad]
     @Query("""

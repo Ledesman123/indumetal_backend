@@ -13,6 +13,12 @@ public interface StockUbicacionRepository extends JpaRepository<StockUbicacion, 
 
     List<StockUbicacion> findByMaterialId(Long materialId);
 
+    // RF-12: stock de todos los materiales dentro de un almacen (para iniciar un inventario completo)
+    List<StockUbicacion> findByUbicacionAlmacenId(Long almacenId);
+
+    // RF-10: foto del stock actual con saldo positivo (pantalla de Stock del frontend)
+    List<StockUbicacion> findByCantidadGreaterThan(BigDecimal cantidad);
+
     // RF-10: stock total disponible de un material (suma en todas sus ubicaciones)
     @Query("SELECT COALESCE(SUM(s.cantidad), 0) FROM StockUbicacion s WHERE s.material.id = :materialId")
     BigDecimal sumarStockPorMaterial(Long materialId);

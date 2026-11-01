@@ -10,5 +10,5 @@ import java.util.List;
 @Setter
 public class IniciarInventarioRequest {
     @NotNull private Long almacenId;
-    @NotNull private List<Long> materialIds; // materiales a contar en este ciclo
+    private List<Long> materialIds; // materiales a contar en este ciclo; vacio = todo el almacen
 }

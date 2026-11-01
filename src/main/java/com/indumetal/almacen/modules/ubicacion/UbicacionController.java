@@ -50,6 +50,45 @@ public class UbicacionController {
         return ApiResponse.ok(ubicacionRepository.findByAlmacenIdAndActivoTrue(almacenId));
     }
 
+    // Todas las ubicaciones activas (de todos los almacenes), usado por los formularios de movimientos.
+    @GetMapping
+    public ApiResponse<List<Ubicacion>> listarActivas() {
+        return ApiResponse.ok(ubicacionRepository.findByActivoTrueOrderByIdAsc());
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('SUPERVISOR_ALMACEN','ADMINISTRADOR')")
+    @Transactional
+    public ApiResponse<Ubicacion> actualizar(@PathVariable Long id, @Valid @RequestBody UbicacionRequest req) {
+        Ubicacion ubicacion = buscar(id);
+        Almacen almacen = almacenRepository.findById(req.getAlmacenId())
+                .orElseThrow(() -> ResourceNotFoundException.of("Almacen", req.getAlmacenId()));
+
+        ubicacion.setAlmacen(almacen);
+        ubicacion.setCodigo(req.getCodigo());
+        ubicacion.setZona(req.getZona());
+        ubicacion.setPasillo(req.getPasillo());
+        ubicacion.setEstante(req.getEstante());
+        ubicacion.setNivel(req.getNivel());
+        ubicacion.setCapacidadMaxima(req.getCapacidadMaxima());
+        return ApiResponse.ok("Ubicacion actualizada", ubicacionRepository.save(ubicacion));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('SUPERVISOR_ALMACEN','ADMINISTRADOR')")
+    @Transactional
+    public ApiResponse<Void> desactivar(@PathVariable Long id) {
+        Ubicacion ubicacion = buscar(id);
+        ubicacion.setActivo(false);
+        ubicacionRepository.save(ubicacion);
+        return ApiResponse.ok("Ubicacion desactivada", null);
+    }
+
+    private Ubicacion buscar(Long id) {
+        return ubicacionRepository.findById(id)
+                .orElseThrow(() -> ResourceNotFoundException.of("Ubicacion", id));
+    }
+
     @Getter
     @Setter
     public static class UbicacionRequest {
